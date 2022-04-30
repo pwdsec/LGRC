@@ -2,6 +2,10 @@
 // created: 2022-04-29
 // ----------------------------------------------------------------------------
 
+mod auth;
+
+use reqwest::Client;
+use serde_json::Value;
 use std::io::stdin;
 use std::io::stdout;
 use std::io::Read;
@@ -10,8 +14,6 @@ use std::path::Path;
 use std::process::Command;
 use tokio::fs::File;
 use tokio::io::AsyncWriteExt;
-use reqwest::Client; 
-use serde_json::Value; 
 
 static mut ID_TOKEN: String = String::new();
 
@@ -197,11 +199,10 @@ async fn main() {
         //let args = parts;
 
         match command {
-            "account-info" => {
-                unsafe {
-                    if ID_TOKEN != "" {
-                        let client = Client::new();
-                        let response = client.post("https://api.luawl.com/validateLoginFB.php")
+            "account-info" => unsafe {
+                if ID_TOKEN != "" {
+                    let client = Client::new();
+                    let response = client.post("https://api.luawl.com/validateLoginFB.php")
                             .bearer_auth(ID_TOKEN.as_str())
                             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
                             .header("Origin", "https://dashboard.luawl.com")
@@ -218,36 +219,35 @@ async fn main() {
                             .header("Accept-Language", "en-US,en;q=0.9")
                             .header("Sec-Ch-Ua", "\"(Not(A:Brand\";v=\"8\", \"Chromium\";v=\"100\"")
                             .header("Content-Length", "0").send().await.unwrap();
-                        let response_body = response.text().await.unwrap();
-                        if response_body.contains("ERROR") {
-                            println!("Login failed");
-                        } else {
-                            println!("Login success:");
-                            let json: Value = serde_json::from_str(&response_body).unwrap();
-
-                            let user_email = json["data"][0]["user_email"].as_str().unwrap();
-                            let discord_id = json["data"][0]["discord_id"].as_str().unwrap();
-                            let account_id = json["data"][0]["account_id"].as_str().unwrap();
-                            let plan_name = json["data"][0]["plan_name"].as_str().unwrap();
-                            let plan_renewal_date =
-                                json["data"][0]["plan_renewal_date"].as_str().unwrap();
-                            let created_on = json["data"][0]["created_on"].as_str().unwrap();
-
-                            println!("\tuser_email: {}", user_email);
-                            println!("\tdiscord_id: {}", discord_id);
-                            println!("\taccount_id: {}", account_id);
-                            println!("\tplan_name: {}", plan_name);
-                            println!("\tplan_renewal_date: {}", plan_renewal_date);
-                            println!("\tcreated_on: {}", created_on);
-
-                            let mut file = File::create("login.json").await.unwrap();
-                            file.write_all(response_body.as_bytes()).await.unwrap();
-                        }
+                    let response_body = response.text().await.unwrap();
+                    if response_body.contains("ERROR") {
+                        println!("Login failed");
                     } else {
-                        colour::blue_ln!("[INFO] - please use \"login-user\"");
+                        println!("Login success:");
+                        let json: Value = serde_json::from_str(&response_body).unwrap();
+
+                        let user_email = json["data"][0]["user_email"].as_str().unwrap();
+                        let discord_id = json["data"][0]["discord_id"].as_str().unwrap();
+                        let account_id = json["data"][0]["account_id"].as_str().unwrap();
+                        let plan_name = json["data"][0]["plan_name"].as_str().unwrap();
+                        let plan_renewal_date =
+                            json["data"][0]["plan_renewal_date"].as_str().unwrap();
+                        let created_on = json["data"][0]["created_on"].as_str().unwrap();
+
+                        println!("\tuser_email: {}", user_email);
+                        println!("\tdiscord_id: {}", discord_id);
+                        println!("\taccount_id: {}", account_id);
+                        println!("\tplan_name: {}", plan_name);
+                        println!("\tplan_renewal_date: {}", plan_renewal_date);
+                        println!("\tcreated_on: {}", created_on);
+
+                        let mut file = File::create("login.json").await.unwrap();
+                        file.write_all(response_body.as_bytes()).await.unwrap();
                     }
+                } else {
+                    colour::blue_ln!("[INFO] - please use \"login-user\"");
                 }
-            }
+            },
             "login" => {
                 let mut email = String::new();
                 let mut password = String::new();
@@ -260,44 +260,15 @@ async fn main() {
                 stdin().read_line(&mut password).unwrap();
                 print!("\x1b[0m");
 
-                let data = "{\"email\":\"".to_string()
-                    + &email.trim()
-                    + "\",\"password\":\""
-                    + &password.trim()
-                    + "\",\"returnSecureToken\":true}";
-
-                    let client = Client::new();
-                let response = client.post("https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=AIzaSyCio3wiwvwX1bkk5lSNXMnT6maKMPkfgrQ")
-                    .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
-                    .header("Origin", "https://dashboard.luawl.com")
-                    .header("Host", "identitytoolkit.googleapis.com")
-                    .header("Content-Type", "application/json")
-                    .header("Sec-Fetch-Site", "cross-site")
-                    .header("Sec-Fetch-Mode", "cors")
-                    .header("Sec-Fetch-Dest", "empty")
-                    .header("Sec-Ch-Ua-Platform", "Windows")
-                    .header("Sec-Ch-Ua-Mobile", "?0")
-                    .header("Accept", "*/*")
-                    .header("Accept-Encoding", "text/plain")
-                    .header("Accept-Language", "en-US,en;q=0.9")
-                    .header("Sec-Ch-Ua", "\"(Not(A:Brand\";v=\"8\", \"Chromium\";v=\"100\"")
-                    .header("X-Client-Version", "Chrome/JsCore/9.6.2/FirebaseCore-web")
-                    .header("X-Firebase-Gmpid", "1:552204352220:web:1c9ee365e32be4b4979219")
-                    .body(data).send().await.unwrap();
-
-                let response_body = response.text().await.unwrap();
-
-                if !response_body.contains("idToken") {
+                let info = auth::authenticate::login(email.as_str(), password.as_str()).await;
+                if info == "Login failed" {
                     println!("Login failed");
                 } else {
                     println!("Login success:");
-                    let json: Value = serde_json::from_str(&response_body).unwrap();
-
-                    let id_token = json["idToken"].as_str().unwrap();
-                    println!("\tidToken: {}...", &id_token[0..8]);
+                    println!("\tidToken: {}...", &info[0..8]);
 
                     unsafe {
-                        ID_TOKEN = id_token.to_string();
+                        ID_TOKEN = info.to_string();
                     }
                 }
             }

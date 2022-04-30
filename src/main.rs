@@ -1,3 +1,7 @@
+// author: pwdsec
+// created: 2022-04-29
+// ----------------------------------------------------------------------------
+
 use std::io::stdin;
 use std::io::stdout;
 use std::io::Read;

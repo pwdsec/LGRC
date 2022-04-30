@@ -3,6 +3,8 @@
 // ----------------------------------------------------------------------------
 
 mod auth;
+mod lua_guard;
+mod console;
 
 use reqwest::Client;
 use serde_json::Value;
@@ -75,113 +77,6 @@ fn setup() -> String {
     }
 
     return cleaned_email.to_string();
-}
-
-fn clear_screen() {
-    let mut stdout = std::io::stdout();
-    stdout.write_all(b"\x1b[2J").unwrap();
-    stdout.write_all(b"\x1b[1;1H").unwrap();
-}
-
-async unsafe fn save_setting(property: String, value: String) {
-    if ID_TOKEN != "" {
-        let client = Client::new();
-        let response = client.post("https://api.luawl.com/saveSetting.php")
-            .bearer_auth(ID_TOKEN.as_str())
-            .header("Content-Type", "application/json")
-            .header("Host", "api.luawl.com")
-            .header("Sec-Ch-Ua", "\"(Not(A:Brand\";v=\"8\", \"Chromium\";v=\"100\"")
-            .header("Sec-Ch-Ua-Mobile", "?0")
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
-            .header("Sec-Ch-Ua-Platform", "\"Windows\"")
-            .header("Accept", "*/*")
-            .header("Origin", "https://whitelist.void-scripts.com")
-            .header("Sec-Fetch-Site", "cross-site")
-            .header("Sec-Fetch-Mode", "cors")
-            .header("Sec-Fetch-Dest", "empty")
-            .header("Referer", "https://whitelist.void-scripts.com/")
-            .header("Referer", "https://whitelist.void-scripts.com/")
-            .header("Accept-Encoding", "text/plain")
-            .header("Accept-Language", "en-US,en;q=0.9")
-            .body(format!(r#"{{"{}": {}}}"#, property, value))
-            .send().await.unwrap();
-
-        if response.text().await.unwrap().contains("settings updated") {
-            println!("Settings updated");
-        } else {
-            println!("there was an error updating settings");
-        }
-    } else {
-        println!("You are not logged in");
-    }
-}
-
-async unsafe fn add_constant(constant: String, isencrypted: String) {
-    if ID_TOKEN != "" {
-        let client = Client::new();
-        let response = client.post("https://api.luawl.com/createConstant.php")
-            .bearer_auth(ID_TOKEN.as_str())
-            .header("Content-Type", "application/json")
-            .header("Host", "api.luawl.com")
-            .header("Sec-Ch-Ua", "\"(Not(A:Brand\";v=\"8\", \"Chromium\";v=\"100\"")
-            .header("Sec-Ch-Ua-Mobile", "?0")
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
-            .header("Sec-Ch-Ua-Platform", "\"Windows\"")
-            .header("Accept", "*/*")
-            .header("Origin", "https://dashboard.luawl.com")
-            .header("Sec-Fetch-Site", "cross-site")
-            .header("Sec-Fetch-Mode", "cors")
-            .header("Sec-Fetch-Dest", "empty")
-            .header("Referer", "https://dashboard.luawl.com/")
-            .header("Accept-Encoding", "text/plain")
-            .header("Accept-Language", "en-US,en;q=0.9")
-            .body(format!(r#"{{"constant": "{}", "isEncrypted": {}, "isDynamic": 1}}"#, constant, isencrypted))
-            .send().await.unwrap();
-
-        if response.text().await.unwrap().contains("Constant created") {
-            println!("Constant added");
-        } else {
-            println!("there was an error adding constant");
-        }
-    } else {
-        println!("You are not logged in");
-    }
-}
-
-async unsafe fn add_script(
-    script_name: String,
-    is_enabled: String,
-    script_notes: String,
-    shoppy_link: String,
-    webhook_url: String,
-) {
-    if ID_TOKEN != "" {
-        let client = Client::new();
-        let response = client.post("https://api.luawl.com/createWLScript.php")
-            .bearer_auth(ID_TOKEN.as_str())
-            .header("Content-Type", "application/json")
-            .header("Host", "api.luawl.com")
-            .header("Sec-Ch-Ua", "\"(Not(A:Brand\";v=\"8\", \"Chromium\";v=\"100\"")
-            .header("Sec-Ch-Ua-Mobile", "?0")
-            .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
-            .header("Sec-Ch-Ua-Platform", "\"Windows\"")
-            .header("Accept", "*/*")
-            .header("Origin", "https://dashboard.luawl.com")
-            .header("Sec-Fetch-Site", "cross-site")
-            .header("Sec-Fetch-Mode", "cors")
-            .header("Sec-Fetch-Dest", "empty")
-            .header("Referer", "https://dashboard.luawl.com/")
-            .header("Accept-Encoding", "text/plain")
-            .header("Accept-Language", "en-US,en;q=0.9")
-            .body(format!(r#"{{"scriptName": "{}", "isEnabled": {}, "scriptNotes": "{}", "shoppyLink": "{}", "webhook_url": "{}"}}"#, script_name, is_enabled, script_notes, shoppy_link, webhook_url))
-            .send().await.unwrap();
-
-        if response.text().await.unwrap().contains("Script created") {
-            println!("Script added");
-        } else {
-            println!("there was an error adding script");
-        }
-    }
 }
 
 #[tokio::main]
@@ -273,7 +168,7 @@ async fn main() {
                 }
             }
             "settings" => {
-                clear_screen();
+                console::clear_screen();
                 let settings = "1) WL Enabled
                 2) Allow Synapse-X
                 2) Allow Krnl
@@ -303,11 +198,33 @@ async fn main() {
 
                         if input.contains("true") {
                             unsafe {
-                                save_setting("enabled".to_string(), "1".to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "enabled".to_string(),
+                                    "1".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else if input.contains("false") {
                             unsafe {
-                                save_setting("enabled".to_string(), "0".to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "enabled".to_string(),
+                                    "0".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else {
                             println!("Invalid input");
@@ -322,11 +239,33 @@ async fn main() {
 
                         if input.contains("true") {
                             unsafe {
-                                save_setting("allow_syn".to_string(), "1".to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "allow_syn".to_string(),
+                                    "1".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else if input.contains("false") {
                             unsafe {
-                                save_setting("allow_syn".to_string(), "0".to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "allow_syn".to_string(),
+                                    "0".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else {
                             println!("Invalid input");
@@ -341,11 +280,33 @@ async fn main() {
 
                         if input.contains("true") {
                             unsafe {
-                                save_setting("allow_krnl".to_string(), "1".to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "allow_krnl".to_string(),
+                                    "1".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else if input.contains("false") {
                             unsafe {
-                                save_setting("allow_krnl".to_string(), "0".to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "allow_krnl".to_string(),
+                                    "0".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else {
                             println!("Invalid input");
@@ -360,11 +321,33 @@ async fn main() {
 
                         if input.contains("true") {
                             unsafe {
-                                save_setting("allow_scriptware".to_string(), "1".to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "allow_scriptware".to_string(),
+                                    "1".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else if input.contains("false") {
                             unsafe {
-                                save_setting("allow_scriptware".to_string(), "0".to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "allow_scriptware".to_string(),
+                                    "0".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else {
                             println!("Invalid input");
@@ -379,11 +362,33 @@ async fn main() {
 
                         if input.contains("true") {
                             unsafe {
-                                save_setting("key_cooldown".to_string(), input.to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "key_cooldown".to_string(),
+                                    "1".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else if input.contains("false") {
                             unsafe {
-                                save_setting("key_cooldown".to_string(), input.to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "key_cooldown".to_string(),
+                                    "0".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else {
                             println!("Invalid input");
@@ -398,11 +403,33 @@ async fn main() {
 
                         if input.contains("true") {
                             unsafe {
-                                save_setting("hwid_cooldown".to_string(), input.to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "hwid_cooldown".to_string(),
+                                    "1".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else if input.contains("false") {
                             unsafe {
-                                save_setting("hwid_cooldown".to_string(), input.to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "hwid_cooldown".to_string(),
+                                    "0".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else {
                             println!("Invalid input");
@@ -417,13 +444,33 @@ async fn main() {
 
                         if input.contains("true") {
                             unsafe {
-                                save_setting("userid_cooldown".to_string(), input.to_string())
-                                    .await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "userid_cooldown".to_string(),
+                                    "1".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else if input.contains("false") {
                             unsafe {
-                                save_setting("userid_cooldown".to_string(), input.to_string())
-                                    .await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "userid_cooldown".to_string(),
+                                    "0".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else {
                             println!("Invalid input");
@@ -438,11 +485,33 @@ async fn main() {
 
                         if input.contains("true") {
                             unsafe {
-                                save_setting("ip_cooldown".to_string(), input.to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "ip_cooldown".to_string(),
+                                    "1".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else if input.contains("false") {
                             unsafe {
-                                save_setting("ip_cooldown".to_string(), input.to_string()).await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "ip_cooldown".to_string(),
+                                    "0".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else {
                             println!("Invalid input");
@@ -457,13 +526,33 @@ async fn main() {
 
                         if input.contains("true") {
                             unsafe {
-                                save_setting("show_ukraine_loader".to_string(), input.to_string())
-                                    .await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "show_ukraine_loader".to_string(),
+                                    "1".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else if input.contains("false") {
                             unsafe {
-                                save_setting("show_ukraine_loader".to_string(), input.to_string())
-                                    .await;
+                                let req = lua_guard::request::save_setting(
+                                    ID_TOKEN.to_string(),
+                                    "show_ukraine_loader".to_string(),
+                                    "0".to_string(),
+                                )
+                                .await;
+
+                                if req == "Settings updated" {
+                                    println!("{}", req);
+                                } else {
+                                    println!("{}", req);
+                                }
                             }
                         } else {
                             println!("Invalid input");
@@ -502,7 +591,17 @@ async fn main() {
                 let input2 = input2.trim();
 
                 unsafe {
-                    add_constant(input.to_string(), input2.to_string()).await;
+                    let req = lua_guard::request::add_constant(
+                        ID_TOKEN.to_string(),
+                        input.to_string(),
+                        input2.to_string(),
+                    ).await;
+
+                    if req == "Constant added" {
+                        println!("{}", req);
+                    } else {
+                        println!("{}", req);
+                    }
                 }
             }
             "add-script" => {
@@ -537,14 +636,20 @@ async fn main() {
                 let input5 = input5.trim();
 
                 unsafe {
-                    add_script(
+                    let req = lua_guard::request::add_script(
+                        ID_TOKEN.to_string(),
                         input.to_string(),
                         input2.to_string(),
                         input3.to_string(),
                         input4.to_string(),
                         input5.to_string(),
-                    )
-                    .await;
+                    ).await;
+
+                    if req == "Script added" {
+                        println!("{}", req);
+                    } else {
+                        println!("{}", req);
+                    }
                 }
             }
             "lgf" => {
@@ -562,19 +667,34 @@ async fn main() {
                 match input {
                     "1" => unsafe {
                         for i in 1..10000 {
-                            add_constant(format!("{}", i), "false".to_string()).await;
-                        }
+                            let req = lua_guard::request::add_constant(
+                                ID_TOKEN.to_string(),
+                                format!("{}", i),
+                                "1".to_string(),
+                            ).await;
+        
+                            if req == "Constant added" {
+                                println!("{}", req);
+                            } else {
+                                println!("{}", req);
+                            }                        }
                     },
                     "2" => unsafe {
                         for i in 1..10000 {
-                            add_script(
+                            let req = lua_guard::request::add_script(
+                                ID_TOKEN.to_string(),
                                 format!("{}", i),
                                 "true".to_string(),
                                 "test".to_string(),
                                 "test".to_string(),
                                 "test".to_string(),
-                            )
-                            .await;
+                            ).await;
+        
+                            if req == "Script added" {
+                                println!("{}", req);
+                            } else {
+                                println!("{}", req);
+                            }
                         }
                     },
                     _ => {
@@ -597,7 +717,7 @@ async fn main() {
                 println!("{}", "\tquit/exit: Exit the program");
             }
             "cls" | "clear" => {
-                clear_screen();
+                console::clear_screen();
             }
             "exit" | "quit" => return,
             _command => {

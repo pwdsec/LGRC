@@ -20,7 +20,6 @@ fn setup() -> String {
             .expect("failed to execute process");
     }
 
-    // create config file if not exist
     let config_path = Path::new("./config.json");
 
     if !config_path.exists() {

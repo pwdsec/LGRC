@@ -3,8 +3,8 @@
 // ----------------------------------------------------------------------------
 
 mod auth;
-mod lua_guard;
 mod console;
+mod lua_guard;
 
 use reqwest::Client;
 use serde_json::Value;
@@ -595,7 +595,8 @@ async fn main() {
                         ID_TOKEN.to_string(),
                         input.to_string(),
                         input2.to_string(),
-                    ).await;
+                    )
+                    .await;
 
                     if req == "Constant added" {
                         println!("{}", req);
@@ -643,7 +644,8 @@ async fn main() {
                         input3.to_string(),
                         input4.to_string(),
                         input5.to_string(),
-                    ).await;
+                    )
+                    .await;
 
                     if req == "Script added" {
                         println!("{}", req);
@@ -671,13 +673,14 @@ async fn main() {
                                 ID_TOKEN.to_string(),
                                 format!("{}", i),
                                 "1".to_string(),
-                            ).await;
-        
+                            )
+                            .await;
                             if req == "Constant added" {
                                 println!("{}", req);
                             } else {
                                 println!("{}", req);
-                            }                        }
+                            }
+                        }
                     },
                     "2" => unsafe {
                         for i in 1..10000 {
@@ -688,8 +691,8 @@ async fn main() {
                                 "test".to_string(),
                                 "test".to_string(),
                                 "test".to_string(),
-                            ).await;
-        
+                            )
+                            .await;
                             if req == "Script added" {
                                 println!("{}", req);
                             } else {

@@ -1,0 +1,19 @@
+[package]
+name = "lgrc"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+colour = "0.6.0"
+serde = "1.0.136"
+serde_json = "1.0.79"
+flate2 = "1.0.23"
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.11.10", features = ["json"] }
+webbrowser = "0.7.1"
+threadpool = "1.8.1"
+num_cpus = "1.13.1"
+futures = "0.3.21"
+async-await = "0.2.1"

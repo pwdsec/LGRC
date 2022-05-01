@@ -2,12 +2,14 @@
 // created: 2022-04-29
 // ----------------------------------------------------------------------------
 
+mod app_settings;
 mod auth;
 mod console;
 mod lua_guard;
 
 use reqwest::Client;
 use serde_json::Value;
+use std::fs;
 use std::io::stdin;
 use std::io::stdout;
 use std::io::Read;
@@ -81,6 +83,7 @@ fn setup() -> String {
 
 #[tokio::main]
 async fn main() {
+    app_settings::auth::initialize_settings();
     colour::blue_ln!("[INFO] - Welcome, {}\n", setup());
     loop {
         print!("[LGRC]> ");
@@ -146,14 +149,44 @@ async fn main() {
             "login" => {
                 let mut email = String::new();
                 let mut password = String::new();
-                print!("Enter email: ");
-                stdout().flush().unwrap();
-                stdin().read_line(&mut email).unwrap();
-                print!("Enter password: ");
-                print!("\x1b[8m");
-                stdout().flush().unwrap();
-                stdin().read_line(&mut password).unwrap();
-                print!("\x1b[0m");
+
+                if app_settings::auth::get_save_email() == "true" {
+                    email = app_settings::auth::get_email();
+
+                    if email == "" {
+                        println!("[INFO] - Please enter your email");
+                        stdin().read_line(&mut email).unwrap();
+                        email = email.trim().to_string();
+                    }
+                    println!("[INFO] - Saved Email: {}", email);
+                    print!("Enter password: ");
+                    print!("\x1b[8m");
+                    stdout().flush().unwrap();
+                    stdin().read_line(&mut password).unwrap();
+                    print!("\x1b[0m");
+                } else {
+                    print!("Enter email: ");
+                    stdout().flush().unwrap();
+                    stdin().read_line(&mut email).unwrap();
+                    print!("Enter password: ");
+                    print!("\x1b[8m");
+                    stdout().flush().unwrap();
+                    stdin().read_line(&mut password).unwrap();
+                    print!("\x1b[0m");
+
+                    // do you want to save the email
+                    let mut save_email = String::new();
+                    print!("Save email? (y/n): ");
+                    stdout().flush().unwrap();
+                    stdin().read_line(&mut save_email).unwrap();
+
+                    if save_email.trim() == "y" || save_email.trim() == "Y" {
+                        app_settings::auth::set_save_email(true);
+                        app_settings::auth::write_email(email.trim().to_string());
+                    } else {
+                        app_settings::auth::set_save_email(false);
+                    }
+                }
 
                 let info = auth::authenticate::login(email.as_str(), password.as_str()).await;
                 if info == "Login failed" {
@@ -705,6 +738,41 @@ async fn main() {
                     }
                 }
             }
+            "reset" => {
+                let mut input = String::new();
+                print!("Are you sure? (yes/no): ");
+                stdout().flush().unwrap();
+                stdin().read_line(&mut input).unwrap();
+                let input = input.trim();
+
+                match input {
+                    "yes" => {
+                        let path = Path::new("config.json");
+                        if path.exists() {
+                            fs::remove_file(path).unwrap();
+                        }
+
+                        let path = Path::new("login.json");
+                        if path.exists() {
+                            fs::remove_file(path).unwrap();
+                        }
+
+                        println!("[INFO] - Config and login files deleted");
+                        println!("[INFO] - Please press enter and re-open the app...");
+
+                        let mut input = String::new();
+                        stdin().read_line(&mut input).unwrap();
+
+                        std::process::exit(0);
+                    }
+                    "no" => {
+                        println!("Reset cancelled");
+                    }
+                    _ => {
+                        println!("Invalid input");
+                    }
+                }
+            }
             "help" | "h" | "?" => {
                 println!("\n{}", "Commands:");
                 println!("{}", "\tlogin - Login to the dashboard");
@@ -717,6 +785,7 @@ async fn main() {
                 println!("{}", "\topen-dashboard - Open the dashboard");
                 println!("{}", "\tcls/clear: Clear the console");
                 colour::red_ln!("{}", "\tlgf - Lua Guard Fucker");
+                println!("{}", "\treset - Reset the files");
                 println!("{}", "\tquit/exit: Exit the program");
             }
             "cls" | "clear" => {

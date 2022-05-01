@@ -9,7 +9,7 @@ pub mod auth {
         if !config_path.exists() {
             let mut settings_file = std::fs::File::create("settings.ini").unwrap();
             settings_file.write_all(b"[settings]\n").unwrap();
-            settings_file.write_all(b"email = \n").unwrap();
+            settings_file.write_all(b"e@mail = \n").unwrap();
             settings_file.write_all(b"save_email = \n").unwrap();
         }
     }
@@ -20,21 +20,21 @@ pub mod auth {
         settings_file.read_to_string(&mut contents).unwrap();
         let mut email = String::new();
         for line in contents.lines() {
-            if line.contains("email") {
-                email = line.replace("email = ", "");
+            if line.contains("e@mail") {
+                email = line.replace("e@mail = ", "");
             }
         }
         return email;
     }
 
-    pub fn write_email(email: String) {
+    pub async fn write_email(email: String) {
         let mut settings_file = std::fs::File::open("settings.ini").unwrap();
         let mut contents = String::new();
         settings_file.read_to_string(&mut contents).unwrap();
         let mut new_contents = String::new();
         for line in contents.lines() {
-            if line.contains("email") {
-                new_contents = new_contents + "email = " + &email + "\n";
+            if line.contains("e@mail") {
+                new_contents = new_contents + "e@mail = " + &email + "\n";
             } else {
                 new_contents = new_contents + line + "\n";
             }
@@ -57,7 +57,7 @@ pub mod auth {
         return save_email;
     }
 
-    pub fn set_save_email(save_email: bool) {
+    pub async fn set_save_email(save_email: bool) {
         let mut settings_file = std::fs::File::open("settings.ini").unwrap();
         let mut contents = String::new();
         settings_file.read_to_string(&mut contents).unwrap();

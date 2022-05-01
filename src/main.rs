@@ -181,10 +181,10 @@ async fn main() {
                     stdin().read_line(&mut save_email).unwrap();
 
                     if save_email.trim() == "y" || save_email.trim() == "Y" {
-                        app_settings::auth::set_save_email(true);
-                        app_settings::auth::write_email(email.trim().to_string());
+                        app_settings::auth::set_save_email(true).await;
+                        app_settings::auth::write_email(email.trim().to_string()).await;
                     } else {
-                        app_settings::auth::set_save_email(false);
+                        app_settings::auth::set_save_email(false).await;
                     }
                 }
 

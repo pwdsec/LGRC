@@ -30,7 +30,7 @@ fn setup() -> String {
             .expect("failed to execute process");
     }
 
-    let config_path = Path::new("./config.json");
+    /*let config_path = Path::new("./config.json");
 
     if !config_path.exists() {
         let mut config_file =
@@ -48,7 +48,7 @@ fn setup() -> String {
         config_file
             .write_all(config.as_bytes())
             .expect("Unable to write config file");
-    }
+    }*/
 
     let login_path = Path::new("./login.json");
 

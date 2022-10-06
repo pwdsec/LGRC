@@ -100,7 +100,7 @@ async fn main() {
             "account-info" => unsafe {
                 if ID_TOKEN != "" {
                     let client = Client::new();
-                    let response = client.post("https://api.luawl.com/validateLoginFB.php")
+                    let response = client.post("https://api2.luawl.com/validateLoginFB.php")
                             .bearer_auth(ID_TOKEN.as_str())
                             .header("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/100.0.4896.127 Safari/537.36")
                             .header("Origin", "https://dashboard.luawl.com")
@@ -122,6 +122,7 @@ async fn main() {
                         println!("Login failed");
                     } else {
                         println!("Login success:");
+                        //println!("{}", response_body);
                         let json: Value = serde_json::from_str(&response_body).unwrap();
 
                         let user_email = json["data"][0]["user_email"].as_str().unwrap();
